@@ -1,0 +1,105 @@
+/* ---------- FreeCell cells, Spider stock ---------- */
+
+.slot.cell { background: rgba(0, 0, 0, .2); box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .1), inset 0 8px 20px rgba(0, 0, 0, .16); }
+.slot.cell::after {
+  content: "Free";
+  font: 800 max(8px, calc(var(--cw) * .1)) var(--ui);
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .22);
+}
+.v-spider .slot.stock { cursor: pointer; }
+
+/* ---------- Card backs (unlockable) ----------
+   Each design reads --back-1 / --back-2 from the felt, except Constellation and Gilded,
+   which carry their own palettes. [data-back] sits on the board and on Settings previews. */
+
+[data-back="sunburst"] .back {
+  background-image:
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, .5) 0 4%, transparent 4.5%),
+    repeating-conic-gradient(from 0deg at 50% 50%, rgba(255, 255, 255, .14) 0 5deg, transparent 5deg 12deg),
+    radial-gradient(75% 60% at 50% 50%, var(--back-1), var(--back-2));
+}
+[data-back="sunburst"] .back::before {
+  width: calc(var(--cw) * .36);
+  height: calc(var(--cw) * .36);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, .7);
+  background: transparent;
+  box-shadow: 0 0 0 calc(var(--cw) * .045) rgba(255, 255, 255, .12), inset 0 0 0 calc(var(--cw) * .03) rgba(255, 255, 255, .1);
+}
+
+[data-back="waves"] .back {
+  background-image:
+    radial-gradient(circle at 50% 100%, transparent 0 22%, rgba(255, 255, 255, .2) 22% 30%, transparent 30% 46%, rgba(255, 255, 255, .2) 46% 54%, transparent 54% 70%, rgba(255, 255, 255, .2) 70% 78%, transparent 78%),
+    linear-gradient(170deg, var(--back-1), var(--back-2));
+  background-size: calc(var(--cw) * .2) calc(var(--cw) * .1), 100% 100%;
+}
+[data-back="waves"] .back::before {
+  width: calc(var(--cw) * .3);
+  height: calc(var(--cw) * .3);
+  border-radius: 50% 50% 0 50%;
+  transform: translate(-50%, -50%) rotate(45deg);
+  background: var(--back-2);
+  border: 1.5px solid rgba(255, 255, 255, .7);
+  box-shadow: 0 0 0 calc(var(--cw) * .04) var(--back-2);
+}
+
+[data-back="deco"] .back {
+  background-image:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .13) 0 1px, transparent 1px calc(var(--cw) * .07)),
+    linear-gradient(180deg, var(--back-1), var(--back-2));
+}
+[data-back="deco"] .back::before {
+  width: calc(var(--cw) * .56);
+  height: calc(var(--cw) * .28);
+  top: 46%;
+  transform: translate(-50%, -50%);
+  border-radius: calc(var(--cw) * .28) calc(var(--cw) * .28) 0 0;
+  border: 1.5px solid color-mix(in srgb, var(--gold) 85%, white);
+  border-bottom: 0;
+  background:
+    repeating-conic-gradient(from -90deg at 50% 100%, color-mix(in srgb, var(--gold) 70%, transparent) 0 1.6deg, transparent 1.6deg 18deg),
+    var(--back-2);
+  box-shadow: 0 calc(var(--cw) * .02) 0 calc(var(--cw) * .025) var(--back-2);
+}
+
+[data-back="constellation"] .back {
+  background-color: #0b1026;
+  background-image:
+    radial-gradient(1.3px 1.3px at 18% 22%, #fff 60%, transparent 70%),
+    radial-gradient(1px 1px at 72% 14%, #fff 60%, transparent 70%),
+    radial-gradient(1.6px 1.6px at 82% 38%, #ffe8b0 60%, transparent 70%),
+    radial-gradient(1px 1px at 30% 64%, #fff 60%, transparent 70%),
+    radial-gradient(1.4px 1.4px at 62% 76%, #fff 60%, transparent 70%),
+    radial-gradient(1px 1px at 14% 86%, #cfd8ff 60%, transparent 70%),
+    radial-gradient(1.2px 1.2px at 88% 88%, #fff 60%, transparent 70%),
+    radial-gradient(1px 1px at 44% 36%, #cfd8ff 60%, transparent 70%),
+    radial-gradient(90% 70% at 30% 20%, rgba(110, 130, 255, .3), transparent 60%),
+    linear-gradient(160deg, #1d2758, #090d22);
+}
+[data-back="constellation"] .back::before {
+  width: calc(var(--cw) * .26);
+  height: calc(var(--cw) * .26);
+  transform: translate(-50%, -50%);
+  border: 0;
+  background: #f6d68a;
+  clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%);
+  box-shadow: none;
+  filter: drop-shadow(0 0 4px rgba(246, 214, 138, .8));
+}
+
+[data-back="gilded"] .back {
+  border-color: #241904;
+  background-image:
+    repeating-linear-gradient(45deg, rgba(80, 50, 0, .2) 0 1px, transparent 1px 6px),
+    repeating-linear-gradient(-45deg, rgba(80, 50, 0, .2) 0 1px, transparent 1px 6px),
+    linear-gradient(135deg, #7d5110 0%, #f3d27c 28%, #b8841f 50%, #fbe7a6 72%, #7d5110 100%);
+}
+[data-back="gilded"] .back::before {
+  background: #241904;
+  border-color: #fbe7a6;
+  box-shadow: 0 0 0 calc(var(--cw) * .035) #241904, 0 0 0 calc(var(--cw) * .035 + 1px) rgba(251, 231, 166, .6);
+}
+[data-back="gilded"] .back::after { border-color: rgba(36, 25, 4, .45); }

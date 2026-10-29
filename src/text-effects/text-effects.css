@@ -1,0 +1,119 @@
+/*
+ * Adapted from Colorion "CSS Text Effects" — https://text-effects.colorion.co/
+ * (github.com/ckissi/colorion-text-effects, MIT licensed).
+ *   #32 Gold-Foil, #21 Pop-Riot, #82 Ghostwrite, #109 Wax-Seal
+ * Fonts, sizes and iteration counts are retuned for the game; colour tokens
+ * follow the library's --ink / --ink-2 / --ink-3 convention.
+ */
+
+/* #32 Gold-Foil — embossed metallic letters with a diagonal specular sweep */
+.fx-foil {
+  color: transparent;
+  background:
+    linear-gradient(108deg,
+      #7a4a08 0%,
+      #f2c15d 18%,
+      #fff4b8 24%,
+      #b87014 36%,
+      #f6d66d 51%,
+      #8e560b 68%,
+      #fff0a2 76%,
+      #c98218 100%
+    ) 0 0 / 230% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: drop-shadow(0 1px 0 rgba(255, 244, 184, .35)) drop-shadow(0 6px 12px rgba(0, 0, 0, .35));
+  animation: fx-foil 6s ease-in-out infinite;
+}
+@keyframes fx-foil {
+  0%, 100% { background-position: 115% 0; }
+  45%      { background-position: -35% 0; }
+}
+
+/* #21 Pop-Riot — letters leap with a hard comic-book drop shadow (plays once, then rests) */
+.fx-pop b {
+  font-weight: inherit;
+  display: inline-block;
+  animation: fx-pop 1.5s cubic-bezier(.3, 1.6, .4, 1) 1 both;
+  animation-delay: calc(var(--i) * .07s + .25s);
+}
+@keyframes fx-pop {
+  0%, 55%, 100% { transform: translateY(0); text-shadow: 0 0 0 var(--ink-2); }
+  25% { transform: translateY(-12px) rotate(-4deg); text-shadow: 0 12px 0 var(--ink-2); }
+}
+
+/* #82 Ghostwrite — a soft luminance band sweeps muted letters */
+.fx-shimmer {
+  color: transparent;
+  background: linear-gradient(90deg,
+      color-mix(in srgb, var(--ink) 45%, transparent) 0 40%,
+      color-mix(in srgb, var(--ink) 75%, transparent) 46%,
+      #fff 50%,
+      color-mix(in srgb, var(--ink) 75%, transparent) 54%,
+      color-mix(in srgb, var(--ink) 45%, transparent) 60% 100%
+    ) 0 0 / 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: fx-shimmer 2.2s linear infinite;
+}
+@keyframes fx-shimmer {
+  to { background-position: 300% 0; }
+}
+
+/* #109 Wax-Seal — molten wax compresses beneath a rotating embossed seal (stamped once) */
+.fx-waxseal {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  width: 92px;
+  height: 92px;
+  box-sizing: border-box;
+  font: 800 15px/1.1 var(--display);
+  letter-spacing: .16em;
+  white-space: pre;
+  color: color-mix(in srgb, var(--ink-2) 40%, #210f22);
+  text-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 65%, transparent), 0 -1px 1px #210f22;
+  animation: fx-wax-impress 1.6s cubic-bezier(.22, 1, .36, 1) both;
+}
+.fx-waxseal::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  z-index: -1;
+  border-radius: 43% 57% 46% 54% / 55% 44% 56% 45%;
+  background:
+    radial-gradient(ellipse at 32% 24%, color-mix(in srgb, var(--ink) 55%, transparent), transparent 42%),
+    conic-gradient(from 20deg, var(--ink-2), #48132f, var(--ink-2), #731f48, var(--ink-2));
+  box-shadow: inset 3px 4px 5px #ffffff55, inset -4px -5px 6px #16081788, 0 6px 0 #260f24, 0 12px 16px #08070f66;
+  animation: fx-wax-pool 1.6s ease-in-out both;
+}
+.fx-waxseal::after {
+  content: '';
+  position: absolute;
+  inset: 14px;
+  border: 3px double color-mix(in srgb, var(--ink) 45%, var(--ink-2));
+  border-radius: 50%;
+  box-shadow: inset 0 2px 2px #210f2266, 0 1px 1px #ffffff55;
+  pointer-events: none;
+  animation: fx-wax-ring 1.6s ease-in-out both;
+}
+@keyframes fx-wax-impress {
+  0% { transform: rotate(-18deg) scale(1.35); opacity: 0; }
+  45% { transform: rotate(-8deg) scale(.92); opacity: 1; }
+  70%, 100% { transform: rotate(-8deg) scale(1); opacity: 1; }
+}
+@keyframes fx-wax-pool {
+  0%, 30% { border-radius: 50%; transform: scale(.86); }
+  65%, 100% { border-radius: 43% 57% 46% 54% / 55% 44% 56% 45%; transform: scale(1); }
+}
+@keyframes fx-wax-ring {
+  0%, 38% { opacity: 0; transform: rotate(30deg) scale(.8); }
+  70%, 100% { opacity: 1; transform: rotate(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-foil, .fx-shimmer, .fx-pop b { animation: none; }
+  .fx-waxseal { animation: none; transform: rotate(-8deg); }
+  .fx-waxseal::before, .fx-waxseal::after { animation: none; }
+}

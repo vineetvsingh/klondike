@@ -1,0 +1,63 @@
+:root {
+  /* Type: Fraunces (soft, high-contrast serif) for ranks and headlines,
+     Plus Jakarta Sans for interface text and numbers. */
+  --display: "Fraunces Variable", "Iowan Old Style", Georgia, serif;
+  --ui: "Plus Jakarta Sans Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* Card stock */
+  --ivory-hi: #fffdf8;
+  --ivory-lo: #f5efe2;
+  --red: #c42b3c;
+  --ink: #171b26;
+
+  /* Interface */
+  --cream: #fbf7ee;
+  --gold: #f2c15d;
+  --gold-deep: #b98219;
+  --mint: #8ff0c0;
+  --panel-ink: #1a1d27;
+  --panel-muted: #7a7568;
+  --panel-sunk: #ece5d5;
+  --panel-raised: #ffffff;
+
+  --glass: rgba(255, 255, 255, .07);
+  --glass-hover: rgba(255, 255, 255, .14);
+  --glass-line: rgba(255, 255, 255, .12);
+  --hud: rgba(0, 0, 0, .22);
+
+  /* Default felt: Emerald */
+  --felt-hi: #1d7a58;
+  --felt: #0f5640;
+  --felt-lo: #0a3b2c;
+  --back-1: #c43450;
+  --back-2: #7a1428;
+
+  --cw: 90px;
+  --ch: 126px;
+}
+
+[data-theme="sapphire"] {
+  --felt-hi: #2a4f8f; --felt: #173262; --felt-lo: #0c1830;
+  --back-1: #e3b74a; --back-2: #8f6410;
+}
+[data-theme="bordeaux"] {
+  --felt-hi: #7a2440; --felt: #521529; --felt-lo: #330b18;
+  --back-1: #3f7fb8; --back-2: #163454;
+}
+[data-theme="noir"] {
+  --felt-hi: #3a3f46; --felt: #22262b; --felt-lo: #111316;
+  --back-1: #d6b26b; --back-2: #7d5a1e;
+  --gold: #e6c27a;
+}
+[data-theme="lagoon"] {
+  --felt-hi: #1f7f86; --felt: #12535a; --felt-lo: #072d33;
+  --back-1: #e8775e; --back-2: #93301f;
+}
+[data-theme="plum"] {
+  --felt-hi: #6a3f86; --felt: #432456; --felt-lo: #1f1029;
+  --back-1: #e9c26a; --back-2: #8c6516;
+}
+[data-theme="copper"] {
+  --felt-hi: #94522d; --felt: #5e3119; --felt-lo: #2e170c;
+  --back-1: #3aa39d; --back-2: #135450;
+}

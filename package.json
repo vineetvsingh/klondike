@@ -1,0 +1,32 @@
+{
+  "name": "solitaire",
+  "private": true,
+  "version": "2.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:all": "npm run typecheck && npm test && npm run test:e2e"
+  },
+  "dependencies": {
+    "@fontsource-variable/fraunces": "^5.2.5",
+    "@fontsource-variable/plus-jakarta-sans": "^5.2.5",
+    "motion": "^12.23.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^4.6.0",
+    "typescript": "~5.8.3",
+    "vite": "^6.3.5",
+    "vitest": "^5.0.5"
+  }
+}

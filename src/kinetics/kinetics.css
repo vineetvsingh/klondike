@@ -1,0 +1,138 @@
+/*
+ * Adapted from Colorion "Kinetics" — https://kinetics.colorion.co/
+ *   Magnetic Button + Squish Button, Tab Pill Glide, Number Counter,
+ *   Toast Overshoot, Undo Snackbar.
+ * Easing curves are kept from the originals; styling is themed for the table.
+ */
+
+/* Magnetic Button — the zone is a little larger than the button so the pull starts early */
+.magnet-zone {
+  display: inline-grid;
+  padding: 4px;
+  margin: -4px;
+}
+
+/* Tab Pill Glide — indicator measures the target before gliding */
+.glide-tabs {
+  position: relative;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--panel-sunk);
+}
+.glide-pill {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  border-radius: 10px;
+  background: var(--panel-raised);
+  box-shadow: 0 1px 2px rgba(20, 16, 8, .12), 0 4px 12px -4px rgba(20, 16, 8, .18);
+  transition:
+    left .4s cubic-bezier(.65, 0, .35, 1),
+    width .4s cubic-bezier(.65, 0, .35, 1);
+}
+.glide-tab {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 9px 8px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--panel-muted);
+  font: 700 14px var(--ui);
+  cursor: pointer;
+  transition: color .3s .1s;
+}
+.glide-tab small { font-size: 11px; font-weight: 600; opacity: .75; }
+.glide-tab[aria-pressed="true"] { color: var(--panel-ink); }
+
+/* Number Counter — the digit bumps and overshoots on change */
+.bump-number {
+  display: inline-block;
+  transition: transform .4s cubic-bezier(.34, 1.56, .64, 1), color .4s;
+}
+.bump-number.bump {
+  transform: scale(1.25) translateY(-4px);
+  color: var(--gold);
+  transition: transform .08s ease-out, color .08s;
+}
+
+/* Toast Overshoot — slides past its rest position before settling */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: max(22px, env(safe-area-inset-bottom));
+  z-index: 40;
+  max-width: calc(100vw - 32px);
+  padding: 12px 20px;
+  border-radius: 999px;
+  background: rgba(12, 14, 18, .9);
+  border: 1px solid rgba(255, 255, 255, .08);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: .01em;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, .4);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+  transform: translate(-50%, 140%) scale(.9);
+  opacity: 0;
+  transition: transform .55s cubic-bezier(.18, 1.25, .4, 1), opacity .3s;
+}
+.toast.show {
+  transform: translate(-50%, 0) scale(1);
+  opacity: 1;
+}
+
+/* Undo Snackbar — a timed bar drains while the action can still be undone */
+.snackbar {
+  position: fixed;
+  left: 50%;
+  bottom: max(22px, env(safe-area-inset-bottom));
+  z-index: 41;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  overflow: hidden;
+  padding: 10px 10px 10px 18px;
+  border-radius: 16px;
+  background: var(--cream);
+  color: var(--panel-ink);
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, .45);
+  transform: translate(-50%, 160%);
+  transition: transform .4s cubic-bezier(.34, 1.56, .64, 1);
+}
+.snackbar.show { transform: translate(-50%, 0); }
+.snackbar button {
+  height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--panel-ink);
+  color: #fff;
+  font: 700 13px var(--ui);
+  cursor: pointer;
+}
+.snackbar .progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--gold-deep);
+  transform-origin: left;
+  animation: drain var(--undo-ms, 5000ms) linear forwards;
+}
+@keyframes drain { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .glide-pill, .bump-number, .toast, .snackbar { transition-duration: .01s; }
+}
