@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
-import { motion } from 'motion/react';
+import { memo, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { GlideTabs } from '../kinetics/GlideTabs';
 import { VARIANTS } from '../game/engine';
 import { bestDailyStreak, dailyNumber, dailyStreak, monthGrid } from '../game/daily';
@@ -28,36 +27,43 @@ interface Props {
 
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
-export function StatsDialog({ open, tab, onTab, onClose, profile, today, dailyActive, onPlayDaily, onShareDaily, onResetStats }: Props) {
+export function StatsDialog({ open, ...body }: Props) {
   return (
-    <Modal open={open} onClose={onClose} labelledBy="stats-title" className="wide">
-      <div className="dlg">
-        <h2 id="stats-title">{tab === 'daily' ? 'Daily Deal' : tab === 'stats' ? 'Your statistics' : 'Achievements'}</h2>
-        <div className="dlg-tabs">
-          <GlideTabs<StatsTab>
-            label="Section"
-            value={tab}
-            onChange={onTab}
-            options={[
-              { value: 'daily', label: 'Daily' },
-              { value: 'stats', label: 'Stats' },
-              { value: 'awards', label: 'Awards' },
-            ]}
-          />
-        </div>
-        {tab === 'daily' && (
-          <DailyPane profile={profile} today={today} active={dailyActive} onPlay={onPlayDaily} onShare={onShareDaily} />
-        )}
-        {tab === 'stats' && <StatsPane profile={profile} onReset={onResetStats} />}
-        {tab === 'awards' && <AwardsPane profile={profile} />}
-        <div className="dlg-actions">
-          <span className="spacer" />
-          <button type="button" className="dbtn primary" onClick={onClose} data-autofocus>Done</button>
-        </div>
-      </div>
+    <Modal open={open} onClose={body.onClose} labelledBy="stats-title" className="wide">
+      <StatsBody {...body} />
     </Modal>
   );
 }
+
+/** Kept apart from `open`, so showing the dialog doesn't re-render its contents. */
+const StatsBody = memo(function StatsBody({ tab, onTab, onClose, profile, today, dailyActive, onPlayDaily, onShareDaily, onResetStats }: Omit<Props, 'open'>) {
+  return (
+    <div className="dlg">
+      <h2 id="stats-title">{tab === 'daily' ? 'Daily Deal' : tab === 'stats' ? 'Your statistics' : 'Achievements'}</h2>
+      <div className="dlg-tabs">
+        <GlideTabs<StatsTab>
+          label="Section"
+          value={tab}
+          onChange={onTab}
+          options={[
+            { value: 'daily', label: 'Daily' },
+            { value: 'stats', label: 'Stats' },
+            { value: 'awards', label: 'Awards' },
+          ]}
+        />
+      </div>
+      {tab === 'daily' && (
+        <DailyPane profile={profile} today={today} active={dailyActive} onPlay={onPlayDaily} onShare={onShareDaily} />
+      )}
+      {tab === 'stats' && <StatsPane profile={profile} onReset={onResetStats} />}
+      {tab === 'awards' && <AwardsPane profile={profile} />}
+      <div className="dlg-actions">
+        <span className="spacer" />
+        <button type="button" className="dbtn primary" onClick={onClose} data-autofocus>Done</button>
+      </div>
+    </div>
+  );
+});
 
 // ---------- Daily ----------
 
@@ -118,18 +124,16 @@ function DailyPane({ profile, today, active, onPlay, onShare }: {
             const cls = `cal-day${r ? ' done' : ''}${key === today ? ' today' : ''}${key > today ? ' future' : ''}`;
             const label = r ? `${key}: solved in ${formatTime(r.time)}, ${r.moves} moves` : key;
             return (
-              <motion.span
+              <span
                 key={key}
-                className={cls}
+                className={`${cls}${r ? ' pop-in' : ''}`}
+                style={r ? ({ '--i': i % 7 } as CSSProperties) : undefined}
                 role="gridcell"
                 aria-label={label}
                 title={r ? `#${dailyNumber(key)} · ${formatTime(r.time)} · ${r.moves} moves` : undefined}
-                initial={r ? { scale: 0.6, opacity: 0 } : false}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: 'spring', stiffness: 500, damping: 28, delay: (i % 7) * 0.02 }}
               >
                 {Number(key.slice(-2))}
-              </motion.span>
+              </span>
             );
           })}
         </div>
@@ -209,30 +213,21 @@ function AwardsPane({ profile }: { profile: Profile }) {
   return (
     <>
       <p className="dlg-sub">{n} of {ACHIEVEMENTS.length} unlocked. Winning games also unlocks new card backs and felts in Settings.</p>
-      <motion.ul
-        className="awards"
-        initial="hidden"
-        animate="show"
-        variants={{ show: { transition: { staggerChildren: 0.025 } } }}
-      >
-        {ACHIEVEMENTS.map((a) => {
+      <ul className="awards">
+        {ACHIEVEMENTS.map((a, i) => {
           const at = got[a.id];
           return (
-            <motion.li
-              key={a.id}
-              className={`award${at ? ' got' : ''}`}
-              variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }}
-            >
+            <li key={a.id} className={`award rise${at ? ' got' : ''}`} style={{ '--i': i, '--step': '25ms' } as CSSProperties}>
               <span className="award-badge" aria-hidden="true">{at ? <CheckIcon /> : <LockIcon />}</span>
               <span className="award-text">
                 <b>{a.title}</b>
                 <small>{a.detail}</small>
               </span>
               {at && <time dateTime={new Date(at).toISOString()}>{new Date(at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</time>}
-            </motion.li>
+            </li>
           );
         })}
-      </motion.ul>
+      </ul>
     </>
   );
 }

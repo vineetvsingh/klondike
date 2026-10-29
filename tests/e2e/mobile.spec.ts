@@ -16,9 +16,23 @@ test('phone layout fits, with secondary actions in a menu', async ({ page }) => 
   expect(overflow).toBeLessThanOrEqual(0);
   await expect(page.getByRole('button', { name: 'Daily Deal' })).toBeHidden();
   await page.getByRole('button', { name: 'More' }).tap();
-  await expect(page.getByRole('menuitem')).toHaveCount(4);
+  await expect(page.getByRole('menuitem')).toHaveCount(5);
   await page.getByRole('menuitem', { name: 'Stats & awards' }).tap();
   await expect(page.getByRole('heading', { name: 'Your statistics' })).toBeVisible();
+});
+
+test('games are picked from the menu, after a confirmation', async ({ page }) => {
+  await open(page);
+  await page.getByRole('button', { name: 'More' }).tap();
+  await page.getByRole('menuitem', { name: /Change game/ }).tap();
+  const picker = page.getByRole('dialog', { name: 'Choose a game' });
+  await expect(picker).toBeVisible();
+  const box = await picker.boundingBox();
+  expect(box!.x).toBeGreaterThanOrEqual(0);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+  await page.getByRole('button', { name: /^FreeCell/ }).tap();
+  await page.getByRole('button', { name: 'Switch game' }).tap();
+  await expect(page.locator('.card.up')).toHaveCount(52);
 });
 
 test('tapping the stock draws three, and dragging buzzes', async ({ page }) => {

@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { BumpNumber } from '../kinetics/BumpNumber';
 import { MagneticButton } from '../kinetics/MagneticButton';
 import { SuitIcon } from './SuitSprite';
+import { GamePicker, type GameChoice } from './GamePicker';
 import {
-  BulbIcon, CalendarIcon, ChartIcon, MoreIcon, ShuffleIcon, SlidersIcon, SoundOffIcon, SoundOnIcon, UndoIcon,
+  BulbIcon, CalendarIcon, CardsIcon, ChartIcon, ChevronIcon, MoreIcon, ShuffleIcon, SlidersIcon, SoundOffIcon, SoundOnIcon, UndoIcon,
 } from './Icons';
 import { formatTime } from './format';
 
@@ -14,6 +15,9 @@ interface Props {
   score: number;
   mode: string;
   verified: boolean;
+  current: GameChoice;
+  saved: GameChoice;
+  onPickGame: (choice: GameChoice) => void;
   canUndo: boolean;
   soundOn: boolean;
   onToggleSound: () => void;
@@ -27,6 +31,8 @@ interface Props {
 
 export function TopBar(p: Props) {
   const [menu, setMenu] = useState(false);
+  const [games, setGames] = useState(false);
+  const closeGames = useCallback(() => setGames(false), []);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -50,15 +56,40 @@ export function TopBar(p: Props) {
   return (
     <header className="topbar">
       <div className="brand">
-        <span className="brand-mark"><SuitIcon suit="S" /></span>
-        <span className="brand-text">
-          <span className="brand-name fx-foil">Solitaire</span>
-          <span className="brand-mode">
-            {p.mode}
-            {p.verified && <span className="verified" title="The solver proved this deal can be won">Winnable</span>}
+        <button
+          type="button"
+          className="brand-btn"
+          data-game-trigger
+          onClick={() => setGames((g) => !g)}
+          aria-expanded={games}
+          aria-haspopup="dialog"
+          aria-label={`Game: ${p.mode}. Choose a game`}
+          title="Choose a game"
+        >
+          <span className="brand-mark"><SuitIcon suit="S" /></span>
+          <span className="brand-text">
+            <span className="brand-name fx-foil">Solitaire</span>
+            <span className="brand-mode">
+              {p.mode}
+              {p.verified && <span className="verified" title="The solver proved this deal can be won">Winnable</span>}
+            </span>
           </span>
-        </span>
+          <span className="brand-chevron"><ChevronIcon /></span>
+        </button>
       </div>
+      <AnimatePresence>
+        {games && (
+          <GamePicker
+            current={p.current}
+            saved={p.saved}
+            onClose={closeGames}
+            onPick={(c) => {
+              setGames(false);
+              p.onPickGame(c);
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       <div className="hud" aria-live="polite">
         <div className="hud-stat"><span className="hud-label">Time</span><span className="hud-value">{formatTime(p.elapsed)}</span></div>
@@ -111,11 +142,14 @@ export function TopBar(p: Props) {
               <motion.div
                 className="more-menu"
                 role="menu"
-                initial={{ opacity: 0, y: -6, scale: 0.96 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -4, scale: 0.98, transition: { duration: 0.12 } }}
-                transition={{ type: 'spring', stiffness: 520, damping: 32 }}
+                initial={{ opacity: 0, transform: 'translateY(-6px) scale(0.96)' }}
+                animate={{ opacity: 1, transform: 'translateY(0px) scale(1)' }}
+                exit={{ opacity: 0, transform: 'translateY(-4px) scale(0.98)', transition: { duration: 0.12 } }}
+                transition={{ duration: 0.18, ease: [0.2, 0.9, 0.3, 1] }}
               >
+                <button type="button" role="menuitem" data-game-trigger onClick={() => { setMenu(false); setGames(true); }}>
+                  <CardsIcon /><span className="menu-two">Change game<small>{p.mode}</small></span>
+                </button>
                 <button type="button" role="menuitem" onClick={pick(p.onDaily)}><CalendarIcon />Daily Deal</button>
                 <button type="button" role="menuitem" onClick={pick(p.onStats)}><ChartIcon />Stats & awards</button>
                 <button type="button" role="menuitem" onClick={pick(p.onToggleSound)}>

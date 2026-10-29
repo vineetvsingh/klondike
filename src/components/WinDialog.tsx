@@ -1,4 +1,4 @@
-import { motion } from 'motion/react';
+import { memo, type CSSProperties } from 'react';
 import { PopText } from '../text-effects/PopText';
 import { dailyNumber } from '../game/daily';
 import { ACHIEVEMENTS, type AchievementId, type Unlock } from '../game/profile';
@@ -28,11 +28,11 @@ interface Props {
   onShare: (date: string) => void;
 }
 
-export function WinDialog({ open, summary, onClose, onNewGame, onShare }: Props) {
+export const WinDialog = memo(function WinDialog({ open, summary, onClose, onNewGame, onShare }: Props) {
   const rate = summary ? Math.round((summary.won / Math.max(summary.played, 1)) * 100) : 0;
   const earned = summary ? ACHIEVEMENTS.filter((a) => summary.achievements.includes(a.id)) : [];
   return (
-    <Modal open={open && !!summary} onClose={onClose} labelledBy="win-title" className="win">
+    <Modal open={open && !!summary} onClose={onClose} labelledBy="win-title" className="win" fresh>
       {summary && (
         <div className="dlg win-body">
           <div className="fx-waxseal win-seal">WON</div>
@@ -51,25 +51,20 @@ export function WinDialog({ open, summary, onClose, onNewGame, onShare }: Props)
             ]}
           />
           {(earned.length > 0 || summary.unlocks.length > 0) && (
-            <motion.ul
-              className="win-unlocks"
-              initial="hidden"
-              animate="show"
-              variants={{ show: { transition: { staggerChildren: 0.08, delayChildren: 0.6 } } }}
-            >
-              {earned.map((a) => (
-                <motion.li key={a.id} variants={{ hidden: { opacity: 0, y: 10, scale: 0.95 }, show: { opacity: 1, y: 0, scale: 1 } }}>
+            <ul className="win-unlocks">
+              {earned.map((a, i) => (
+                <li key={a.id} className="rise" style={rise(i)}>
                   <span className="award-badge" aria-hidden="true"><CheckIcon /></span>
                   <span><b>{a.title}</b><small>{a.detail}</small></span>
-                </motion.li>
+                </li>
               ))}
-              {summary.unlocks.map((u) => (
-                <motion.li key={u.id} className="unlock" variants={{ hidden: { opacity: 0, y: 10, scale: 0.95 }, show: { opacity: 1, y: 0, scale: 1 } }}>
+              {summary.unlocks.map((u, i) => (
+                <li key={u.id} className="unlock rise" style={rise(earned.length + i)}>
                   <span className="award-badge" aria-hidden="true">✦</span>
                   <span><b>New {u.kind === 'back' ? 'card back' : 'felt'}: {u.label}</b><small>Pick it in Settings</small></span>
-                </motion.li>
+                </li>
               ))}
-            </motion.ul>
+            </ul>
           )}
           <div className="dlg-actions center">
             {summary.daily ? (
@@ -85,4 +80,6 @@ export function WinDialog({ open, summary, onClose, onNewGame, onShare }: Props)
       )}
     </Modal>
   );
-}
+});
+
+const rise = (i: number) => ({ '--i': i, '--d': '0.6s', '--step': '80ms' }) as CSSProperties;

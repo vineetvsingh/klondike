@@ -20,8 +20,15 @@ export function GlideTabs<T extends string | number>({ options, value, onChange,
   const active = options.findIndex((o) => o.value === value);
 
   useLayoutEffect(() => {
-    const el = refs.current[active];
-    if (el) setPill({ left: el.offsetLeft, width: el.offsetWidth });
+    const measure = () => {
+      const el = refs.current[active];
+      if (el) setPill((p) => (p && p.left === el.offsetLeft && p.width === el.offsetWidth ? p : { left: el.offsetLeft, width: el.offsetWidth }));
+    };
+    measure();
+    // Tabs can be laid out before the web fonts arrive, or resize with their dialog.
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    refs.current.forEach((el) => el && ro?.observe(el));
+    return () => ro?.disconnect();
   }, [active]);
 
   return (

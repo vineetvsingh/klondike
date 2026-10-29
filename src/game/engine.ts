@@ -15,7 +15,7 @@ export const VARIANTS: { id: VariantId; label: string; blurb: string }[] = [
   { id: 'klondike', label: 'Klondike', blurb: 'The classic: build down in alternating colours.' },
   { id: 'freecell', label: 'FreeCell', blurb: 'Every card face-up, four cells to work with.' },
   { id: 'spider', label: 'Spider', blurb: 'Two decks. Build full suits from King to Ace.' },
-  { id: 'pyramid', label: 'Pyramid', blurb: 'Pair exposed cards that add up to 13. Kings go alone. Three passes through the stock.' },
+  { id: 'pyramid', label: 'Pyramid', blurb: 'Pair cards that add up to 13. Kings go alone.' },
 ];
 
 export const variantLabel = (v: VariantId) => VARIANTS.find((x) => x.id === v)!.label;

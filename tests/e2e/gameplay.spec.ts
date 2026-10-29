@@ -130,6 +130,54 @@ test.describe('Pyramid', () => {
   });
 });
 
+test.describe('Switching games', () => {
+  test('the picker lists every game, and switching asks first', async ({ page }) => {
+    await open(page);
+    const trigger = page.getByRole('button', { name: /Choose a game/ });
+    await trigger.click();
+    const picker = page.getByRole('dialog', { name: 'Choose a game' });
+    await expect(picker).toBeVisible();
+    for (const name of ['Klondike', 'FreeCell', 'Spider', 'Pyramid']) await expect(picker.locator('.game-name', { hasText: name })).toBeVisible();
+    await expect(picker.getByRole('button', { name: 'Klondike · Draw 1' })).toHaveAttribute('aria-current', 'true');
+
+    // Picking the game already on the table changes nothing.
+    await picker.getByRole('button', { name: 'Klondike · Draw 1' }).click();
+    await expect(page.getByRole('heading', { name: /Switch to/ })).toBeHidden();
+
+    // Another game asks first; "Keep playing" leaves the table alone.
+    await playHint(page, 'tap');
+    await trigger.click();
+    await page.getByRole('button', { name: 'Spider · 2 suits' }).click();
+    await expect(page.getByRole('heading', { name: 'Switch to Spider · 2 suits?' })).toBeVisible();
+    await expect(page.getByText('will end and count as a loss')).toBeVisible();
+    await page.getByRole('button', { name: 'Keep playing' }).click();
+    await expect(page.locator('.brand-mode')).toContainText('Klondike · Draw 1');
+    expect(await cardCount(page)).toBe(52);
+
+    // Confirming deals the new game.
+    await trigger.click();
+    await page.getByRole('button', { name: 'Spider · 2 suits' }).click();
+    await page.getByRole('button', { name: 'Switch game' }).click();
+    await expect(page.locator('.brand-mode')).toContainText('Spider · 2 suits');
+    await expect(page.locator('.card')).toHaveCount(104);
+    await expect(page.getByText('New deal started')).toBeVisible(); // the abandoned game can still be undone
+  });
+
+  test('settings no longer hold the game choice, and dialogs show no scrollbar', async ({ page }) => {
+    await page.setViewportSize({ width: 1100, height: 560 }); // short enough that settings must scroll
+    await open(page);
+    await page.getByRole('button', { name: 'Settings' }).click();
+    const panel = page.locator('.modal-root.open .modal-panel');
+    await expect(panel).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Game', exact: true })).toHaveCount(0);
+    const { scrolls, bar } = await panel.evaluate((e: HTMLElement) => ({ scrolls: e.scrollHeight > e.clientHeight, bar: e.offsetWidth - e.clientWidth }));
+    expect(scrolls).toBe(true);
+    expect(bar).toBe(0);
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toHaveCount(0); // closed dialogs are hidden from everyone
+  });
+});
+
 test.describe('Daily Deal', () => {
   test('is the same deal for everyone and can be shared once solved', async ({ page, context }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);

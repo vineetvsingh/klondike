@@ -13,6 +13,8 @@ import type { DealOptions, GameState, Hint, Loc, PileRef, Settings } from './gam
 import { Board } from './components/Board';
 import { Confetti } from './components/Confetti';
 import { SettingsDialog } from './components/SettingsDialog';
+import { SwitchGameDialog } from './components/SwitchGameDialog';
+import { sameGame, type GameChoice } from './components/GamePicker';
 import { StatsDialog, type StatsTab } from './components/StatsDialog';
 import { SuitSprite } from './components/SuitSprite';
 import { TopBar } from './components/TopBar';
@@ -98,6 +100,8 @@ function instantSeed(s: Settings): Partial<DealOptions> {
   return seed == null ? {} : { seed, verified: true };
 }
 
+const testHaptics = () => haptics.play('win');
+
 function modeName(g: GameState) {
   if (g.daily) return `Daily #${dailyNumber(g.daily)}`;
   if (g.variant === 'klondike') return `Klondike · Draw ${g.draw}`;
@@ -119,6 +123,7 @@ export default function App() {
   const [toast, setToast] = useState<{ msg: ReactNode; show: boolean }>({ msg: '', show: false });
   const [snack, setSnack] = useState({ open: false, run: 0 });
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [switchTo, setSwitchTo] = useState<GameChoice | null>(null);
   const [stats, setStats] = useState<{ open: boolean; tab: StatsTab }>({ open: false, tab: 'stats' });
   const [win, setWin] = useState<WinSummary | null>(null);
   const [winOpen, setWinOpen] = useState(false);
@@ -402,9 +407,9 @@ export default function App() {
 
   // ---------- Settings ----------
 
-  const changeSettings = (patch: Partial<Settings>) => {
+  const changeSettings = useCallback((patch: Partial<Settings>) => {
     sound.play('click');
-    const next = { ...settings, ...patch };
+    const next = { ...live.current.settings, ...patch };
     setSettings(next);
     if ('haptics' in patch) {
       haptics.configure(!!patch.haptics);
@@ -414,15 +419,27 @@ export default function App() {
       sound.configure(true, next.volume);
       sound.play('click');
     }
-    const gameChanged = next.variant !== game.variant
-      || (next.variant === 'klondike' && next.draw !== game.draw)
-      || (next.variant === 'spider' && next.suits !== game.suits);
-    if (('variant' in patch || 'draw' in patch || 'suits' in patch) && gameChanged && !game.started && !game.daily) {
-      live.current.settings = next;
-      void newGame();
-      showToast(`Dealt a fresh game of ${modeName({ ...game, variant: next.variant, draw: next.draw, suits: next.suits, daily: null })}`);
-    }
-  };
+  }, []);
+
+  // ---------- Switching games ----------
+
+  const pickGame = useCallback((c: GameChoice) => {
+    const g = live.current.game;
+    if (sameGame(c, g) && !g.daily) return; // already playing it
+    sound.play('click');
+    setSwitchTo(c);
+  }, []);
+
+  const confirmSwitch = useCallback(() => {
+    const c = switchTo;
+    setSwitchTo(null);
+    if (!c) return;
+    const next = { ...live.current.settings, ...c };
+    setSettings(next);
+    live.current.settings = next;
+    void newGame();
+  }, [switchTo, newGame]);
+  const cancelSwitch = useCallback(() => setSwitchTo(null), []);
 
   const toggleSound = useCallback(() => {
     const on = !live.current.settings.sound;
@@ -434,20 +451,34 @@ export default function App() {
     showToast(on ? 'Sound on' : 'Sound off', 1400);
   }, [showToast]);
 
-  const changeVolume = (volume: number) => {
+  const changeVolume = useCallback((volume: number) => {
     setSettings((s) => ({ ...s, volume }));
     sound.configure(true, volume);
     sound.play('place'); // throttled, so dragging the slider gives a gentle preview
-  };
+  }, []);
 
   const openStats = useCallback((tab: StatsTab) => {
     sound.play('click');
     setStats({ open: true, tab });
   }, []);
 
+  // Stable handlers, so the (memoised) dialogs skip the once-a-second clock re-render.
+  const closeSettings = useCallback(() => setSettingsOpen(false), []);
+  const statsTab = useCallback((tab: StatsTab) => setStats((s) => ({ ...s, tab })), []);
+  const closeStats = useCallback(() => setStats((s) => ({ ...s, open: false })), []);
+  const onPlayDaily = useCallback(() => void playDaily(), [playDaily]);
+  const onShareDaily = useCallback((d: string) => void shareDaily(d), [shareDaily]);
+  const resetStats = useCallback(() => {
+    setProfile(emptyProfile());
+    setSettings((s) => withinUnlocks(s, 0));
+    showToast('Statistics reset');
+  }, [showToast]);
+  const closeWin = useCallback(() => setWinOpen(false), []);
+  const dealAgain = useCallback(() => void newGame(), [newGame]);
+
   // ---------- Keyboard ----------
 
-  const anyModal = settingsOpen || winOpen || stats.open;
+  const anyModal = settingsOpen || winOpen || stats.open || !!switchTo;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (anyModal) return;
@@ -483,6 +514,9 @@ export default function App() {
         score={game.score}
         mode={modeName(game)}
         verified={game.verified}
+        current={game}
+        saved={settings}
+        onPickGame={pickGame}
         canUndo={history.length > 0 && !game.won && !autoPlaying}
         soundOn={settings.sound}
         onToggleSound={toggleSound}
@@ -518,41 +552,39 @@ export default function App() {
 
       <SettingsDialog
         open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
+        onClose={closeSettings}
         settings={settings}
-        game={game}
         wins={wins}
         hapticsSupported={haptics.supported}
         onChange={changeSettings}
-        onDealNow={() => {
-          setSettingsOpen(false);
-          void newGame();
-        }}
         onVolumeChange={changeVolume}
-        onTestHaptics={() => haptics.play('win')}
+        onTestHaptics={testHaptics}
       />
       <StatsDialog
         open={stats.open}
         tab={stats.tab}
-        onTab={(tab) => setStats((s) => ({ ...s, tab }))}
-        onClose={() => setStats((s) => ({ ...s, open: false }))}
+        onTab={statsTab}
+        onClose={closeStats}
         profile={profile}
         today={today}
         dailyActive={game.daily === today && !game.won}
-        onPlayDaily={() => void playDaily()}
-        onShareDaily={(d) => void shareDaily(d)}
-        onResetStats={() => {
-          setProfile(emptyProfile());
-          setSettings((s) => withinUnlocks(s, 0));
-          showToast('Statistics reset');
-        }}
+        onPlayDaily={onPlayDaily}
+        onShareDaily={onShareDaily}
+        onResetStats={resetStats}
+      />
+      <SwitchGameDialog
+        choice={switchTo}
+        currentLabel={modeName(game)}
+        inProgress={game.started && !game.won}
+        onConfirm={confirmSwitch}
+        onCancel={cancelSwitch}
       />
       <WinDialog
         open={winOpen}
         summary={win}
-        onClose={() => setWinOpen(false)}
-        onNewGame={() => void newGame()}
-        onShare={(d) => void shareDaily(d)}
+        onClose={closeWin}
+        onNewGame={dealAgain}
+        onShare={onShareDaily}
       />
     </div>
   );

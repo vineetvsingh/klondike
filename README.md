@@ -19,6 +19,8 @@ The first time you run the browser tests, install a browser with `npx playwright
 - **Spider**: two decks with 1, 2 or 4 suits. A finished King-to-Ace suit clears itself, and the stock deals a row only when no column is empty.
 - **Pyramid**: 28 cards in seven overlapping rows. Remove exposed cards in pairs that add up to 13 (J = 11, Q = 12), and kings on their own, using the waste card too. You get three passes through the stock. Tap a king to clear it, or drag one card onto its partner.
 
+To switch games, tap the game name in the top bar (on phones, **⋯ → Change game**). You always confirm before the table is replaced. A game in progress counts as a loss, but you can undo that for a few seconds.
+
 ## Winnable deals and the Daily Deal
 
 `src/game/solver.ts` is a depth-first Klondike solver. It treats the stock and waste as one "talon", so every card that drawing can reach becomes a single move. It also uses a visited set, makes safe foundation moves automatically, and has a node budget, so a timeout means "unknown" and is never counted as winnable. `src/game/solvers.ts` covers the other games: a best-first search for FreeCell and Spider, and a depth-first search for Pyramid. Every solver returns the moves it found, and the unit tests replay those moves through the real rules to prove the solutions are legal. The solvers run in a Web Worker that keeps a couple of proven seeds in reserve for each game and mode, saved across visits, so **Winnable only** deals are usually instant.
@@ -38,6 +40,7 @@ A local profile keeps the last 1,000 games plus totals and best times per game. 
 ## How it's put together
 
 - `src/game/`: the pure rules engine, with one module per game in `rules/` behind a shared interface. It also holds the seeded deals, layout maths, solver, daily logic, profile and storage. None of it uses React.
+- Dialogs stay mounted and are only shown or hidden. They fade in with CSS transitions on the compositor, so opening one doesn't rebuild its contents or repaint the table behind it.
 - `src/components/Board.tsx`: drives every card through Motion values imperatively, so drags and flights run at frame rate without React re-renders.
   - Released cards keep their throw velocity, and cards lean into their direction of travel.
   - A dragged card is pulled gently toward a legal spot nearby (magnetic drop).

@@ -23,9 +23,17 @@
   -webkit-background-clip: text;
   background-clip: text;
   filter: drop-shadow(0 1px 0 rgba(255, 244, 184, .35)) drop-shadow(0 6px 12px rgba(0, 0, 0, .35));
-  animation: fx-foil 6s ease-in-out infinite;
+  background-position: 115% 0;
+  /* One sweep on arrival and another on hover. A looping sweep would repaint the page
+     on every frame, forever, and with a hundred card layers that adds up. */
+  animation: fx-foil 4s ease-in-out .6s 1 both;
 }
+.brand-btn:hover .fx-foil { animation-name: fx-foil-again; animation-delay: 0s; }
 @keyframes fx-foil {
+  0%, 100% { background-position: 115% 0; }
+  45%      { background-position: -35% 0; }
+}
+@keyframes fx-foil-again {
   0%, 100% { background-position: 115% 0; }
   45%      { background-position: -35% 0; }
 }

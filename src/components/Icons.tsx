@@ -59,3 +59,11 @@ export const LockIcon = () => (
 export const ShareIcon = () => (
   <svg {...base}><path d="M12 3v12" /><path d="m7.5 7.5 4.5-4.5 4.5 4.5" /><path d="M5 13v5.5A2.5 2.5 0 0 0 7.5 21h9a2.5 2.5 0 0 0 2.5-2.5V13" /></svg>
 );
+
+export const CardsIcon = () => (
+  <svg {...base}><rect x="3" y="6" width="11" height="15" rx="2" /><path d="M8 3.6 9.2 3a2 2 0 0 1 2.6.9l7.9 13.6a2 2 0 0 1-.7 2.7l-2.5 1.4" /></svg>
+);
+
+export const ChevronIcon = () => (
+  <svg {...base}><path d="m6 9 6 6 6-6" /></svg>
+);
