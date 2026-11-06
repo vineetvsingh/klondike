@@ -51,8 +51,12 @@ class SoundEngine {
   private enabled = true;
   private volume = 0.7;
 
-  /** Browsers only allow audio after a user gesture; call this from one. */
-  unlock() {
+  /**
+   * Starting the audio engine takes tens of milliseconds, far too long to do during the
+   * first click. So it's built ahead of time, while idle. It stays suspended, and silent,
+   * until `unlock` wakes it.
+   */
+  prepare() {
     if (!this.ctx) {
       const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (!AC) return;
@@ -74,7 +78,12 @@ class SoundEngine {
       this.master = master;
       this.noise = noise;
     }
-    if (this.ctx.state === 'suspended') void this.ctx.resume();
+  }
+
+  /** Browsers only allow audio after a user gesture; call this from one. */
+  unlock() {
+    this.prepare();
+    if (this.ctx?.state === 'suspended') void this.ctx.resume();
   }
 
   configure(enabled: boolean, volume: number) {

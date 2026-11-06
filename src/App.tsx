@@ -22,6 +22,7 @@ import { WinDialog, type WinSummary } from './components/WinDialog';
 import { THEMES, THEME_COLOR } from './components/themes';
 import { formatTime } from './components/format';
 import { REDUCED_MOTION } from './components/cardMotion';
+import { ShimmerText } from './text-effects/ShimmerText';
 import { Toast, UndoSnackbar } from './kinetics/Feedback';
 import { sound } from './audio/sound';
 import { haptics } from './audio/haptics';
@@ -167,6 +168,16 @@ export default function App() {
   useEffect(() => sound.configure(settings.sound, settings.volume), [settings.sound, settings.volume]);
   useEffect(() => haptics.configure(settings.haptics), [settings.haptics]);
 
+  useEffect(() => {
+    const prepare = () => sound.prepare();
+    if (typeof requestIdleCallback !== 'function') {
+      const t = setTimeout(prepare, 800);
+      return () => clearTimeout(t);
+    }
+    const id = requestIdleCallback(prepare, { timeout: 2000 });
+    return () => cancelIdleCallback(id);
+  }, []);
+
   // Audio can only start from a user gesture; every press re-arms it (iOS suspends on backgrounding).
   useEffect(() => {
     const unlock = () => sound.unlock();
@@ -266,7 +277,7 @@ export default function App() {
       autoRunning.current = false;
       return;
     }
-    if (!autoRunning.current) showToast(<span className="fx-shimmer">Finishing the table…</span>, 1800);
+    if (!autoRunning.current) showToast(<ShimmerText text="Finishing the table…" />, 1800);
     const delay = autoRunning.current ? 85 : 380;
     autoRunning.current = true;
     const t = window.setTimeout(() => dispatch({ type: 'auto' }), delay);
@@ -306,7 +317,7 @@ export default function App() {
     if (opts.seed == null && s.winnable && checkable(opts)) {
       let seed = dealer.takeNow(opts);
       if (seed == null) {
-        showToast(<span className="fx-shimmer">Finding a winnable deal…</span>, 4000);
+        showToast(<ShimmerText text="Finding a winnable deal…" />, 4000);
         seed = await dealer.take(opts, 3500);
         if (token !== dealToken.current) return; // a newer deal superseded this one
         if (seed == null) showToast('No proven deal yet — this one is unchecked.');
@@ -380,7 +391,7 @@ export default function App() {
     setStats((s) => ({ ...s, open: false }));
     if (g.daily === date && !g.won) return; // already on the table
     const ready = dealer.daily(date);
-    const slow = window.setTimeout(() => showToast(<span className="fx-shimmer">Preparing today's deal…</span>, 6000), 250);
+    const slow = window.setTimeout(() => showToast(<ShimmerText text="Preparing today's deal…" />, 6000), 250);
     const { seed, verified } = await ready;
     clearTimeout(slow);
     setToast((t) => ({ ...t, show: false }));

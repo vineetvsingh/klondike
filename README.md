@@ -1,6 +1,6 @@
 # Solitaire
 
-Klondike, FreeCell, Spider and Pyramid solitaire built with **React 19 + TypeScript + Vite**, animated with **Motion** springs.
+Klondike, FreeCell, Spider and Pyramid solitaire built with **React 19 + TypeScript + Vite**, with cards animated by springs baked into Web Animations.
 
 ```bash
 npm install
@@ -41,13 +41,17 @@ A local profile keeps the last 1,000 games plus totals and best times per game. 
 
 - `src/game/`: the pure rules engine, with one module per game in `rules/` behind a shared interface. It also holds the seeded deals, layout maths, solver, daily logic, profile and storage. None of it uses React.
 - Dialogs stay mounted and are only shown or hidden. They fade in with CSS transitions on the compositor, so opening one doesn't rebuild its contents or repaint the table behind it.
-- `src/components/Board.tsx`: drives every card through Motion values imperatively, so drags and flights run at frame rate without React re-renders.
+- `src/components/cardMotion.ts`: how cards move, built so that up to 104 of them stay smooth.
+  - A flight's whole spring (`spring.ts`) is worked out up front and played as a Web Animation of `transform`, so the compositor runs it with no per-frame JavaScript, even while the page is busy. Only drags are script-driven.
+  - Resting cards have no layer of their own, so they flatten into one picture and cost nothing. A card is promoted only while it moves, and has its 3D only while it turns over.
+  - From the deal to the win dialog, everything animates only `transform` and `opacity`. `tests/e2e/motion.spec.ts` fails if anything else starts to.
+- `src/components/Board.tsx`: tells each card where to go, without React re-renders.
   - Released cards keep their throw velocity, and cards lean into their direction of travel.
   - A dragged card is pulled gently toward a legal spot nearby (magnetic drop).
   - On a win, the cards spiral out of the foundations into a sunflower rosette.
 - `src/audio/sound.ts`: every sound is synthesised live with the Web Audio API, with no audio files. `src/audio/haptics.ts` adds short vibrations on pickup and landing, and a longer one on a win, on phones that support it. **Settings → Vibration → Try it** fires a test buzz. iPhones don't allow web pages to vibrate.
 - `src/kinetics/`: components adapted from [Kinetics](https://kinetics.colorion.co/), namely Magnetic and Squish buttons, Tab Pill Glide, Number Counter, Toast Overshoot and Undo Snackbar.
-- `src/text-effects/`: effects adapted from [CSS Text Effects](https://text-effects.colorion.co/) (MIT), namely the Gold-Foil title, Pop-Riot win headline, Ghostwrite shimmer and Wax-Seal badge.
+- `src/text-effects/`: effects adapted from [CSS Text Effects](https://text-effects.colorion.co/) (MIT), namely the Gold-Foil title, Pop-Riot win headline, Ghostwrite shimmer and Wax-Seal badge. They are adapted to run on the compositor: the foil sweeps only on hover, the headline's shadow is a second copy of each letter rather than an animated `text-shadow`, the shimmer is a stagger of opacity along the letters, and the wax is a pre-drawn image.
 - Fonts: Fraunces (ranks, headlines) and Plus Jakarta Sans (interface), self-hosted via Fontsource.
 
 Keyboard: `Ctrl+Z`/`U` undo · `H` hint · `N` new game · `Space`/`D` draw · `S` stats · `M` mute.

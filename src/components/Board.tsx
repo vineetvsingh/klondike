@@ -1,11 +1,11 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
-import { animate } from 'motion/react';
 import { allCards, autoTarget, canMove, canPick, idsFor, locate, pileOf } from '../game/engine';
 import { computeLayout, computeTargets, landingY, rosette, type Layout, type Point, type Target } from '../game/layout';
 import type { Card, CardBackId, GameState, Hint, Loc, PileRef } from '../game/types';
 import {
-  createHandle, DEAL_SPRING, DEAL_STAGGER, FLIP_SPRING, LIFT_SPRING, MOVE_SPRING, REDUCED_MOTION, WIN_SPRING, type CardHandle,
+  CardHandle, DEAL_SPRING, DEAL_STAGGER, HandFeel, MOVE_SPRING, REDUCED_MOTION, WIN_SPRING,
 } from './cardMotion';
+import type { Spring } from './spring';
 import { PlayingCard } from './PlayingCard';
 import { RecycleIcon } from './Icons';
 import { sound } from '../audio/sound';
@@ -31,7 +31,10 @@ interface Press {
   dragging: boolean;
   ids: string[];
   base: Point[];
+  dx: number;
+  dy: number;
   raw: Point; // where the lead card would be without the magnetic pull
+  want: Point; // the pull the nearest legal spot is asking for
   pull: Point;
 }
 
@@ -55,7 +58,7 @@ export const Board = memo(function Board({ game, dealSignal, hint, locked, cardB
   // One set of motion values per card; Spider's two decks need their own set.
   const deckKey = `${game.variant}:${game.suits}`;
   const ids = useMemo(() => idsFor(game), [deckKey]); // eslint-disable-line react-hooks/exhaustive-deps
-  const handles = useMemo(() => new Map<string, CardHandle>(ids.map((id) => [id, createHandle()])), [ids]);
+  const handles = useMemo(() => new Map<string, CardHandle>(ids.map((id) => [id, new CardHandle()])), [ids]);
   const press = useRef<Press | null>(null);
   const placed = useRef(false);
   const lastLayout = useRef<Layout | null>(null);
@@ -86,67 +89,30 @@ export const Board = memo(function Board({ game, dealSignal, hint, locked, cardB
   const panAt = (x: number) =>
     L ? Math.max(-1, Math.min(1, ((x + L.cw / 2) / L.w) * 2 - 1)) * 0.55 : 0;
 
-  const fly = (h: CardHandle, x: number, y: number, zFly: number, delay = 0, spring = MOVE_SPRING, land = true) => {
-    const token = ++h.token;
-    h.flying = true;
-    h.tx = x;
-    h.ty = y;
-    h.z.set(zFly);
-    const ax = animate(h.x, x, { ...spring, delay });
-    const ay = animate(h.y, y, { ...spring, delay });
-    // A brief lift sells the "picked up, set down" weight.
-    animate(h.lift, [h.lift.get(), 1.045, 1], { duration: 0.42, times: [0, 0.35, 1], ease: 'easeOut', delay });
-
-    // Play the placement the moment the card arrives rather than when the spring fully rests.
-    let unwatch = () => {};
-    if (land && Math.hypot(h.x.get() - x, h.y.get() - y) > 8) {
-      const check = () => {
-        if (h.token !== token) return unwatch();
-        if (Math.hypot(h.x.get() - x, h.y.get() - y) < 6) {
-          unwatch();
-          sound.play('place', { pan: panAt(x) });
-          haptics.play('land');
-        }
-      };
-      const offX = h.x.on('change', check);
-      const offY = h.y.on('change', check);
-      unwatch = () => { offX(); offY(); };
-    }
-
-    Promise.all([ax, ay]).then(() => {
-      unwatch();
-      if (h.token !== token) return;
-      h.flying = false;
-      h.z.set(h.targetZ);
+  const fly = (h: CardHandle, x: number, y: number, z: number, delay = 0, spring: Spring = MOVE_SPRING, land = true) => {
+    h.fly(x, y, {
+      z, delay, spring,
+      // Play the placement the moment the card arrives rather than when the spring fully rests.
+      onArrive: land ? () => {
+        sound.play('place', { pan: panAt(x) });
+        haptics.play('land');
+      } : undefined,
     });
   };
 
-  const turn = (h: CardHandle, to: number, delay = 0) => {
-    if (h.flipTarget === to) return;
-    h.flipTarget = to;
-    animate(h.flip, to, { ...FLIP_SPRING, delay });
-    sound.play('flip', { delay, pan: panAt(h.tx) });
-  };
-
-  const snap = (h: CardHandle, t: Pick<Target, 'x' | 'y' | 'z' | 'up'>, spin = 0) => {
-    h.token++;
-    h.flying = false;
-    h.tx = t.x;
-    h.ty = t.y;
-    h.x.jump(t.x);
-    h.y.jump(t.y);
-    h.flipTarget = t.up ? 180 : 0;
-    h.flip.jump(h.flipTarget);
-    h.lift.jump(1);
-    h.spin.jump(spin);
-    h.z.set(t.z);
+  const turn = (h: CardHandle, up: boolean, delay = 0, quiet = false) => {
+    if (h.turn(up, delay) && !quiet) sound.play('flip', { delay, pan: panAt(h.x) });
   };
 
   const runDeal = (L: Layout, targets: Map<string, Target>) => {
-    for (const h of handles.values()) snap(h, { ...L.deck, z: 1, up: false });
+    for (const h of handles.values()) h.snap(L.deck.x, L.deck.y, 1, false);
     const dealt = new Set<string>();
     const total = game.tableau.reduce((n, c) => n + c.length, 0);
     const stagger = Math.min(DEAL_STAGGER, 1.7 / Math.max(total, 1)); // Spider's 54 cards still deal briskly
+    // Each sound builds its audio nodes now, however far off it plays, and a big deal
+    // would build over a hundred at once. Past a point more of them can't be told apart.
+    const dealSoundEvery = stagger < 0.04 ? 2 : 1;
+    const quietFlips = total > 28;
     let n = 0;
     const rows = Math.max(...game.tableau.map((c) => c.length));
     for (let row = 0; row < rows; row++) {
@@ -158,8 +124,8 @@ export const Board = memo(function Board({ game, dealSignal, hint, locked, cardB
         const delay = n * stagger;
         h.targetZ = t.z;
         fly(h, t.x, t.y, 1000 + n, delay, DEAL_SPRING, false);
-        sound.play('deal', { delay, pan: panAt(t.x) });
-        if (t.up) turn(h, 180, delay + 0.24);
+        if (n % dealSoundEvery === 0) sound.play('deal', { delay, pan: panAt(t.x) });
+        if (t.up) turn(h, true, delay + 0.24, quietFlips);
         dealt.add(c.id);
         n++;
       }
@@ -167,8 +133,7 @@ export const Board = memo(function Board({ game, dealSignal, hint, locked, cardB
     for (const [id, t] of targets) {
       if (dealt.has(id)) continue;
       const h = handles.get(id)!;
-      h.targetZ = t.z;
-      snap(h, t);
+      h.snap(t.x, t.y, t.z, t.up);
     }
     dealingUntil.current = performance.now() + (n * stagger + 0.55) * 1000;
   };
@@ -181,12 +146,13 @@ export const Board = memo(function Board({ game, dealSignal, hint, locked, cardB
       const h = handles.get(s.id)!;
       h.targetZ = s.z;
       if (instant) {
-        snap(h, { x: s.x, y: s.y, z: s.z, up: true }, s.spin);
+        h.snap(s.x, s.y, s.z, true, s.spin);
         continue;
       }
       const delay = s.order * stagger;
-      fly(h, s.x, s.y, s.z, delay, WIN_SPRING, false);
-      animate(h.spin, s.spin, { ...WIN_SPRING, delay });
+      // No flattening a finished rosette: it would cost a big repaint just as the confetti
+      // is falling, for a table that won't move again until the next deal.
+      h.fly(s.x, s.y, { z: s.z, delay, spring: WIN_SPRING, spin: s.spin, stayLifted: true });
       if (s.order % 4 === 0) sound.play('deal', { delay, pan: panAt(s.x) });
     }
   };
@@ -194,6 +160,8 @@ export const Board = memo(function Board({ game, dealSignal, hint, locked, cardB
   useLayoutEffect(() => {
     if (!L || !targets) return;
     const resized = lastLayout.current !== L || lastHandles.current !== handles;
+    // A new deck can reuse the same elements, so the old one's animations must go first.
+    if (lastHandles.current !== handles) for (const h of lastHandles.current.values()) h.halt();
     const prev = lastTargets.current;
     lastLayout.current = L;
     lastHandles.current = handles;
@@ -219,11 +187,12 @@ export const Board = memo(function Board({ game, dealSignal, hint, locked, cardB
       h.targetZ = t.z;
       if (dragging?.has(id)) continue;
       if (!placed.current || resized) {
-        snap(h, t);
+        h.snap(t.x, t.y, t.z, t.up);
         continue;
       }
-      const heading = h.flying && h.tx === t.x && h.ty === t.y;
-      const away = Math.abs(h.x.get() - t.x) > 0.5 || Math.abs(h.y.get() - t.y) > 0.5;
+      const heading = h.flight && h.x === t.x && h.y === t.y;
+      const now = h.now();
+      const away = now.scale !== 1 || Math.abs(now.x - t.x) > 0.5 || Math.abs(now.y - t.y) > 0.5;
       const from = prev?.get(id)?.pile ?? '';
       if (!heading && away) {
         if (from === 'stock' && t.pile.startsWith('tableau')) {
@@ -231,7 +200,7 @@ export const Board = memo(function Board({ game, dealSignal, hint, locked, cardB
           const delay = Number(t.pile.split(':')[1]) * 0.05;
           fly(h, t.x, t.y, 1000 + t.z, delay, DEAL_SPRING, false);
           sound.play('deal', { delay, pan: panAt(t.x) });
-          turn(h, t.up ? 180 : 0, delay + 0.12);
+          turn(h, t.up, delay + 0.12);
           continue;
         }
         if (game.variant === 'spider' && from.startsWith('tableau') && t.pile.startsWith('foundation')) {
@@ -240,8 +209,8 @@ export const Board = memo(function Board({ game, dealSignal, hint, locked, cardB
           continue;
         }
         fly(h, t.x, t.y, 1000 + t.z);
-      } else if (!h.flying) h.z.set(t.z);
-      turn(h, t.up ? 180 : 0, away ? 0.05 : 0);
+      } else if (!h.flight) h.setZ(t.z);
+      turn(h, t.up, away ? 0.05 : 0);
     }
     placed.current = true;
 
@@ -297,13 +266,9 @@ export const Board = memo(function Board({ game, dealSignal, hint, locked, cardB
   };
 
   const shake = (ids: string[]) => {
-    sound.play('nope', { pan: panAt(handles.get(ids[0])!.tx) });
+    sound.play('nope', { pan: panAt(handles.get(ids[0])!.x) });
     haptics.play('nope');
-    for (const id of ids) {
-      const h = handles.get(id)!;
-      const x0 = h.tx;
-      animate(h.x, [x0, x0 + 7, x0 - 6, x0 + 4, x0 - 2, x0], { duration: 0.42, ease: 'easeInOut' });
-    }
+    for (const id of ids) handles.get(id)!.shake();
   };
 
   const returnHome = (ids: string[]) => {
@@ -313,10 +278,28 @@ export const Board = memo(function Board({ game, dealSignal, hint, locked, cardB
     }
   };
 
-  const endDrag = (p: Press) => {
+  const endDrag = () => {
     setDragIds([]);
     setDropKey(null);
-    for (const id of p.ids) animate(handles.get(id)!.lift, 1, LIFT_SPRING);
+  };
+
+  /** Held cards are the one thing still moved by script: they have to follow the pointer. */
+  const followPointer = (p: Press, feel: HandFeel) => {
+    let last = performance.now();
+    const frame = (time: number) => {
+      if (press.current !== p) return;
+      const dt = Math.min(0.05, Math.max(0.001, (time - last) / 1000));
+      last = time;
+      const k = 1 - Math.pow(0.55, dt * 60);
+      p.pull.x += (p.want.x - p.pull.x) * k;
+      p.pull.y += (p.want.y - p.pull.y) * k;
+      feel.step(p.raw.x + p.pull.x, p.raw.y + p.pull.y, dt);
+      p.ids.forEach((id, i) => {
+        handles.get(id)!.pose(p.base[i].x + p.dx + p.pull.x, p.base[i].y + p.dy + p.pull.y, feel);
+      });
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
   };
 
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
@@ -342,8 +325,10 @@ export const Board = memo(function Board({ game, dealSignal, hint, locked, cardB
     }
     if (!action) return;
 
-    const origin = { x: 0, y: 0 };
-    press.current = { pointerId: e.pointerId, x: e.clientX, y: e.clientY, action, loc, dragging: false, ids: [], base: [], raw: origin, pull: origin };
+    press.current = {
+      pointerId: e.pointerId, x: e.clientX, y: e.clientY, action, loc, dragging: false, ids: [], base: [],
+      dx: 0, dy: 0, raw: { x: 0, y: 0 }, want: { x: 0, y: 0 }, pull: { x: 0, y: 0 },
+    };
     try { boardRef.current!.setPointerCapture(e.pointerId); } catch { /* pointer already gone */ }
     e.preventDefault();
   };
@@ -358,22 +343,17 @@ export const Board = memo(function Board({ game, dealSignal, hint, locked, cardB
       if (p.action !== 'card' || !p.loc || Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
       p.dragging = true;
       p.ids = pileOf(game, p.loc).slice(p.loc.i).map((c) => c.id);
-      p.base = p.ids.map((id, k) => {
-        const h = handles.get(id)!;
-        h.token++;
-        h.flying = false;
-        h.x.stop();
-        h.y.stop();
-        h.z.set(5000 + k);
-        animate(h.lift, 1.06, LIFT_SPRING);
-        // Grab from where the card is right now, even mid-flight.
-        return { x: h.x.get() - dx, y: h.y.get() - dy };
-      });
+      // Grab from where the cards are right now, even mid-flight.
+      const poses = p.ids.map((id, k) => handles.get(id)!.grab(5000 + k));
+      p.base = poses.map((pose) => ({ x: pose.x - dx, y: pose.y - dy }));
+      followPointer(p, new HandFeel(poses[0]));
       setDragIds(p.ids);
       sound.play('pick', { pan: panAt(p.base[0].x + dx) });
       haptics.play('pick');
     }
 
+    p.dx = dx;
+    p.dy = dy;
     p.raw = { x: p.base[0].x + dx, y: p.base[0].y + dy };
     const to = findDrop(p);
 
@@ -389,13 +369,7 @@ export const Board = memo(function Board({ game, dealSignal, hint, locked, cardB
         want = { x: ox * k, y: oy * k };
       }
     }
-    p.pull = { x: p.pull.x + (want.x - p.pull.x) * 0.45, y: p.pull.y + (want.y - p.pull.y) * 0.45 };
-
-    p.ids.forEach((id, k) => {
-      const h = handles.get(id)!;
-      h.x.set(p.base[k].x + dx + p.pull.x);
-      h.y.set(p.base[k].y + dy + p.pull.y);
-    });
+    p.want = want;
     setDropKey(to ? pileKey(to.to) : null);
   };
 
@@ -407,7 +381,7 @@ export const Board = memo(function Board({ game, dealSignal, hint, locked, cardB
 
     if (p.dragging) {
       const to = findDrop(p);
-      endDrag(p);
+      endDrag();
       // The cards keep their release velocity: the spring picks up where the hand let go.
       if (to) onMove(p.loc!, to.to);
       else returnHome(p.ids);
@@ -427,7 +401,7 @@ export const Board = memo(function Board({ game, dealSignal, hint, locked, cardB
     const p = press.current;
     press.current = null;
     if (p?.dragging) {
-      endDrag(p);
+      endDrag();
       returnHome(p.ids);
     }
   };

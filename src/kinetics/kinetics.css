@@ -53,15 +53,8 @@
 .glide-tab[aria-pressed="true"] { color: var(--panel-ink); }
 
 /* Number Counter — the digit bumps and overshoots on change */
-.bump-number {
-  display: inline-block;
-  transition: transform .4s cubic-bezier(.34, 1.56, .64, 1), color .4s;
-}
-.bump-number.bump {
-  transform: scale(1.25) translateY(-4px);
-  color: var(--gold);
-  transition: transform .08s ease-out, color .08s;
-}
+.bump-number { display: inline-block; }
+.bump-number.bump { color: var(--gold); }
 
 /* Toast Overshoot — slides past its rest position before settling */
 .toast {
@@ -72,14 +65,13 @@
   max-width: calc(100vw - 32px);
   padding: 12px 20px;
   border-radius: 999px;
-  background: rgba(12, 14, 18, .9);
+  background: rgba(12, 14, 18, .94);
   border: 1px solid rgba(255, 255, 255, .08);
   color: #fff;
   font-size: 14px;
   font-weight: 600;
   letter-spacing: .01em;
   box-shadow: 0 14px 40px rgba(0, 0, 0, .4);
-  backdrop-filter: blur(10px);
   pointer-events: none;
   transform: translate(-50%, 140%) scale(.9);
   opacity: 0;
@@ -134,5 +126,5 @@
 @keyframes drain { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .glide-pill, .bump-number, .toast, .snackbar { transition-duration: .01s; }
+  .glide-pill, .toast, .snackbar { transition-duration: .01s; }
 }

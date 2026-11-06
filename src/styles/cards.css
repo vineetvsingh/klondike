@@ -26,7 +26,6 @@
   font-weight: 700;
   font-variation-settings: "opsz" 144, "SOFT" 100;
   font-size: calc(var(--cw) * .42);
-  transition: box-shadow .25s, background-color .25s, color .25s;
 }
 .slot.stock { cursor: pointer; }
 .slot.stock svg { width: 40%; height: 40%; fill: none; opacity: 0; transition: opacity .3s; }
@@ -42,9 +41,10 @@
   top: 0;
   width: var(--cw);
   height: var(--ch);
-  perspective: 1100px;
-  will-change: transform;
+  contain: layout style;
 }
+/* A card gets a layer of its own only while it's moving; at rest it's part of the flat table. */
+.card[data-fly], .card.dragging { will-change: transform; }
 .card.up { cursor: grab; }
 .card.in-stock { cursor: pointer; }
 .card.dragging { cursor: grabbing; }
@@ -52,20 +52,28 @@
 .card-inner {
   position: absolute;
   inset: 0;
-  transform-style: preserve-3d;
 }
 
 .face, .back {
   position: absolute;
   inset: 0;
   border-radius: calc(var(--cw) * .085);
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-  transition: box-shadow .25s;
 }
 
+/* At rest a card paints only the side that's showing. */
+.card:not([data-flip]):not([data-side="face"]) .face,
+.card:not([data-flip])[data-side="face"] .back { display: none; }
+
+/* The 3D exists only while a card is turning over. */
+.card[data-flip] { perspective: 1100px; }
+.card[data-flip] .card-inner { transform-style: preserve-3d; }
+.card[data-flip] .face, .card[data-flip] .back {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+.card[data-flip] .face { transform: rotateY(180deg); }
+
 .face {
-  transform: rotateY(180deg);
   overflow: hidden;
   background:
     radial-gradient(120% 80% at 30% 0%, rgba(255, 255, 255, .9), transparent 60%),
@@ -113,19 +121,32 @@
 
 .card.buried .face, .card.buried .back { box-shadow: none; }
 
-.card.dragging .face {
-  box-shadow: 0 0 0 1px rgba(40, 30, 10, .1), 0 22px 40px -6px rgba(0, 0, 0, .5);
+/* Glows and the held-card shadow fade by opacity, which needs no repainting. */
+.card.dragging::before, .card.target::after, .slot.target::after, .card.hint::after, .slot.hint::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: calc(var(--cw) * .085);
+  pointer-events: none;
 }
-
-.card.target .face, .slot.target {
+.card.dragging::before {
+  box-shadow: 0 22px 40px -6px rgba(0, 0, 0, .5);
+  animation: glow-in .15s ease-out;
+}
+.card.target::after, .slot.target::after {
   box-shadow: 0 0 0 3px var(--mint), 0 0 24px 3px rgba(143, 240, 192, .5);
+  animation: glow-in .18s ease-out;
 }
 .slot.target { background: rgba(143, 240, 192, .08); }
-
-.card.hint .face, .card.hint .back, .slot.hint { animation: hint-glow 1.5s ease-in-out; }
+.card.hint::after, .slot.hint::after {
+  box-shadow: 0 0 0 3px var(--gold), 0 0 28px 5px rgba(242, 193, 93, .55);
+  opacity: 0;
+  animation: hint-glow 1.5s ease-in-out;
+}
+@keyframes glow-in { from { opacity: 0; } }
 @keyframes hint-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(242, 193, 93, 0); }
-  20%, 70% { box-shadow: 0 0 0 3px var(--gold), 0 0 28px 5px rgba(242, 193, 93, .55); }
+  0%, 100% { opacity: 0; }
+  20%, 70% { opacity: 1; }
 }
 
 /* ---------- Faces ---------- */

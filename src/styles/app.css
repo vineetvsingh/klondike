@@ -6,24 +6,25 @@ body {
   font-family: var(--ui);
   color: #fff;
   background-color: var(--felt-lo);
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .16 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
-    radial-gradient(120% 95% at 50% 12%, var(--felt-hi) 0%, var(--felt) 42%, var(--felt-lo) 100%);
-  background-attachment: fixed;
   overflow: hidden;
-  transition: background-color .5s;
   -webkit-tap-highlight-color: transparent;
   -webkit-font-smoothing: antialiased;
   font-feature-settings: "ss01";
 }
 
-/* Soft vignette so the table edges fall away */
+/* The felt, with a soft vignette so the table edges fall away. It's on a layer of its own:
+   its noise filter is slow to draw, and this way it's drawn once rather than whenever a
+   card moves in front of it. */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(130% 100% at 50% 40%, transparent 55%, rgba(0, 0, 0, .42) 100%);
+  will-change: transform;
+  background-image:
+    radial-gradient(130% 100% at 50% 40%, transparent 55%, rgba(0, 0, 0, .42) 100%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .16 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    radial-gradient(120% 95% at 50% 12%, var(--felt-hi) 0%, var(--felt) 42%, var(--felt-lo) 100%);
 }
 
 svg { fill: currentColor; }
@@ -84,7 +85,6 @@ svg { fill: currentColor; }
   background: var(--hud);
   border: 1px solid var(--glass-line);
   border-radius: 16px;
-  backdrop-filter: blur(8px);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05);
 }
 
@@ -133,7 +133,6 @@ svg { fill: currentColor; }
   font: 700 14px var(--ui);
   letter-spacing: .01em;
   cursor: pointer;
-  backdrop-filter: blur(6px);
   transition: background-color .2s, border-color .2s, opacity .2s;
 }
 .btn:hover:not(:disabled) { background: var(--glass-hover); border-color: rgba(255, 255, 255, .2); }

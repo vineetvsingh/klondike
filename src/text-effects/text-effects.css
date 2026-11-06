@@ -24,48 +24,64 @@
   background-clip: text;
   filter: drop-shadow(0 1px 0 rgba(255, 244, 184, .35)) drop-shadow(0 6px 12px rgba(0, 0, 0, .35));
   background-position: 115% 0;
-  /* One sweep on arrival and another on hover. A looping sweep would repaint the page
-     on every frame, forever, and with a hundred card layers that adds up. */
-  animation: fx-foil 4s ease-in-out .6s 1 both;
 }
-.brand-btn:hover .fx-foil { animation-name: fx-foil-again; animation-delay: 0s; }
+/* Sweeps on hover only: moving a gradient through text repaints on every frame, and on
+   arrival it would be competing with the deal. */
+.brand-btn:hover .fx-foil { animation: fx-foil 3s ease-in-out; }
 @keyframes fx-foil {
   0%, 100% { background-position: 115% 0; }
   45%      { background-position: -35% 0; }
 }
-@keyframes fx-foil-again {
-  0%, 100% { background-position: 115% 0; }
-  45%      { background-position: -35% 0; }
-}
 
-/* #21 Pop-Riot — letters leap with a hard comic-book drop shadow (plays once, then rests) */
+/* #21 Pop-Riot — letters leap with a hard comic-book drop shadow (plays once, then rests).
+   Adapted: the original animates text-shadow, which repaints on every frame. Here the letter
+   and its "shadow" are two copies, so the whole effect runs on the compositor: the ink one
+   leaps, and the coloured one left behind shows only while the letter is in the air. */
 .fx-pop b {
-  font-weight: inherit;
+  position: relative;
   display: inline-block;
-  animation: fx-pop 1.5s cubic-bezier(.3, 1.6, .4, 1) 1 both;
-  animation-delay: calc(var(--i) * .07s + .25s);
+  font-weight: inherit;
+  color: transparent; /* holds the space; the copies do the drawing */
+}
+.fx-pop b::before,
+.fx-pop b::after {
+  content: attr(data-c);
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.fx-pop b::before {
+  color: var(--ink-2);
+  opacity: 0;
+  animation: fx-pop-shadow 1.5s linear calc(var(--i) * .07s + .25s) 1;
+}
+.fx-pop b::after {
+  color: var(--panel-ink);
+  animation: fx-pop 1.5s cubic-bezier(.3, 1.6, .4, 1) calc(var(--i) * .07s + .25s) 1;
 }
 @keyframes fx-pop {
-  0%, 55%, 100% { transform: translateY(0); text-shadow: 0 0 0 var(--ink-2); }
-  25% { transform: translateY(-12px) rotate(-4deg); text-shadow: 0 12px 0 var(--ink-2); }
+  0%, 55%, 100% { transform: translateY(0); }
+  25% { transform: translateY(-12px) rotate(-4deg); }
+}
+@keyframes fx-pop-shadow {
+  0%, 55%, 100% { opacity: 0; }
+  4%, 51% { opacity: 1; }
 }
 
 /* #82 Ghostwrite — a soft luminance band sweeps muted letters */
-.fx-shimmer {
-  color: transparent;
-  background: linear-gradient(90deg,
-      color-mix(in srgb, var(--ink) 45%, transparent) 0 40%,
-      color-mix(in srgb, var(--ink) 75%, transparent) 46%,
-      #fff 50%,
-      color-mix(in srgb, var(--ink) 75%, transparent) 54%,
-      color-mix(in srgb, var(--ink) 45%, transparent) 60% 100%
-    ) 0 0 / 300% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  animation: fx-shimmer 2.2s linear infinite;
+/* Adapted: the original slides a gradient clipped to the text, which repaints on every frame,
+   and it plays in the toast shown while the auto-finish has every card in the air. Here the
+   same band of light passes along the letters as a stagger of opacity, on the compositor. */
+.fx-shimmer b {
+  display: inline-block;
+  font-weight: inherit;
+  color: var(--ink);
+  opacity: .45;
+  animation: fx-shimmer 1.1s ease-in-out calc(var(--i) * 22ms) infinite;
 }
 @keyframes fx-shimmer {
-  to { background-position: 300% 0; }
+  0%, 44%, 100% { opacity: .45; }
+  22% { opacity: 1; }
 }
 
 /* #109 Wax-Seal — molten wax compresses beneath a rotating embossed seal (stamped once) */
@@ -84,16 +100,24 @@
   text-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 65%, transparent), 0 -1px 1px #210f22;
   animation: fx-wax-impress 1.6s cubic-bezier(.22, 1, .36, 1) both;
 }
+/* Adapted: the wax was the costliest thing to draw in the whole win dialog, stalling the screen
+   as the seal landed and again as its animation ended. So it's an image now, of exactly this:
+     84px box at left 18px, top 10px of a 120px square, drawn at 2x;
+     border-radius: 43% 57% 46% 54% / 55% 44% 56% 45%;
+     background: radial-gradient(ellipse at 32% 24%, color-mix(in srgb, #ffd9a8 55%, transparent), transparent 42%),
+       conic-gradient(from 20deg, #b3263e, #48132f, #b3263e, #731f48, #b3263e);
+     box-shadow: inset 3px 4px 5px #ffffff55, inset -4px -5px 6px #16081788, 0 6px 0 #260f24, 0 12px 16px #08070f66;
+   Inlined, so it's there the moment the seal lands. Redraw it if .win-seal's colours change. */
 .fx-waxseal::before {
   content: '';
   position: absolute;
-  inset: 4px;
+  left: -14px;
+  top: -6px;
+  width: 120px;
+  height: 120px;
   z-index: -1;
-  border-radius: 43% 57% 46% 54% / 55% 44% 56% 45%;
-  background:
-    radial-gradient(ellipse at 32% 24%, color-mix(in srgb, var(--ink) 55%, transparent), transparent 42%),
-    conic-gradient(from 20deg, var(--ink-2), #48132f, var(--ink-2), #731f48, var(--ink-2));
-  box-shadow: inset 3px 4px 5px #ffffff55, inset -4px -5px 6px #16081788, 0 6px 0 #260f24, 0 12px 16px #08070f66;
+  background: url('./wax-pool.webp?inline') 0 0 / 100% 100% no-repeat;
+  transform-origin: 60px 52px; /* the middle of the wax, not of its shadow */
   animation: fx-wax-pool 1.6s ease-in-out both;
 }
 .fx-waxseal::after {
@@ -112,8 +136,8 @@
   70%, 100% { transform: rotate(-8deg) scale(1); opacity: 1; }
 }
 @keyframes fx-wax-pool {
-  0%, 30% { border-radius: 50%; transform: scale(.86); }
-  65%, 100% { border-radius: 43% 57% 46% 54% / 55% 44% 56% 45%; transform: scale(1); }
+  0%, 30% { transform: scale(.86); }
+  65%, 100% { transform: scale(1); }
 }
 @keyframes fx-wax-ring {
   0%, 38% { opacity: 0; transform: rotate(30deg) scale(.8); }
@@ -121,7 +145,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fx-foil, .fx-shimmer, .fx-pop b { animation: none; }
+  .fx-foil, .fx-shimmer b, .fx-pop b::before, .fx-pop b::after { animation: none; }
+  .fx-shimmer b { opacity: 1; }
   .fx-waxseal { animation: none; transform: rotate(-8deg); }
   .fx-waxseal::before, .fx-waxseal::after { animation: none; }
 }
